@@ -11,42 +11,78 @@ MAP_WIDTH = 80
 MAP_HEIGHT = 45
 
 #Uses list comprehension
-
 def make_map():
 	global map
 
-	map = [[ Tile(False)
+	map = [[ Tile(True)
 		for y in range(MAP_HEIGHT) ]
 			for x in range(MAP_WIDTH) ]
 
-	map[30][22].blocked = True
-	map[30][22].block_sight = True
-	map[50][22].blocked = True
-	map[50][22].block_sight = True
+	room1 = Rect(20, 15, 10, 15)
+	room2 = Rect(20, 15, 10, 15)
+	create_room(room1)
+	create_room(room2)
+	player.x = 25
+	player.y = 23
+	create_h_tunnel(25, 55, 23)
+#	create_v_tunnel(25, 55, 23)
+
+#Create tunnels Vertically and Horizontally
+def create_h_tunnel(x1, x2, y):
+	global map
+	for x in range(min(x1, x2), max(x1, x2) + 1):
+		map[x][y].blocked = False
+		map[x][y].block_sight = False
+def create_v_tunnel(y1, y2, x):
+	global map
+	for y in range(min(y1, y2), max(y1, y2) + 1):
+		map[x][y].block = False
+		map[x][y].block_sight = False
 
 
 #Walls
-
 color_dark_wall = libtcod.Color(0, 0, 100)
 color_dark_ground = libtcod.Color(50, 50, 150)
 
 #Renders Objects
 def render_all():
-	global color_light_wall
-	global color_light_ground
+	global color_dark_wall, color_light_wall
+	global color_dark_ground, color_light_ground
 
 	for y in range(MAP_HEIGHT):
 		for x in range(MAP_WIDTH):
 			wall = map[x][y].block_sight
 			if wall:
-				libtcod.console_set_char_background(con, x, y, color_dark_wall, libtcod.BKGND_SET )
+				libtcod.console_put_char_ex(con, x, y, '#', libtcod.white, libtcod.black)
 			else:
-				libtcod.console_set_char_background(con, x, y, color_dark_ground, libtcod.BKGND_SET )
+				libtcod.console_put_char_ex(con, x, y, '.', libtcod.grey, libtcod.black )
 	#draw all objects in list (objects variable)
 	for object in objects:
 		object.draw()
 	#blit the contents of "con" to the root console
 	libtcod.console_blit(con, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, 0)
+
+#Clears the space where the character walks
+def clear(self):
+	if libtcod.map_is_in_fov(fov_map, self.x, self.y):
+		libtcod.console_put_char_ex(con, self.x, self.y, '.', libtcod.grey, libtcod.dark_blue)
+
+#Create Rooms
+def create_room(room):
+	global map
+	#go through the tiles in rectangle and make them passable
+	for x in range(room.x1 + 1, room.x2):
+		for y in range(room.y1 + 1, room.y2): #Makes it so that two rooms will never overlap (Always have a space in between)
+			map[x][y].blocked = False
+			map[x][y].block_sight = False 
+
+#Rectangles on the map
+class Rect:
+	def __init__(self, x, y, w, h):
+		self.x1 = x
+		self.y1 = y
+		self.x2 = x + w
+		self.y2 = y + h
 
 
 #Map Tile Class
