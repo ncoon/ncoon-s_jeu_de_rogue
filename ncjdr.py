@@ -14,6 +14,7 @@ MAP_HEIGHT = 45
 ROOM_MAX_SIZE = 10
 ROOM_MIN_SIZE = 6
 MAX_ROOMS = 30
+MAX_ROOM_MONSTERS = 3
 
 #Player's Field of View
 FOV_ALGO = 0 #defaulf FOV algorithm included in libtcod
@@ -25,6 +26,43 @@ color_dark_wall = libtcod.Color(0, 0, 100)
 color_light_wall = libtcod.Color(130, 110, 50)
 color_dark_ground = libtcod.Color(50, 50, 150)
 color_light_ground = libtcod.Color(200, 180, 50)
+
+#Checks if a tile is blocked or not
+def is_blocked(x, y):
+	#first test the map tiles
+	if map[x][y].blocked:
+		return True
+	#now check for any blocking objects
+	for object in objects:
+		if object.blocks and object.x == x and object.y == y:
+			return True
+	return False
+
+#Creates monsters, etc and places then in rooms
+def place_objects(room):
+		#choose random number of monsters
+		num_monsters = libtcod.random_get_int(0, 0, MAX_ROOM_MONSTERS)
+
+		for i in range(num_monsters):
+			#choose random spot for this monster
+			x = libtcod.random_get_int(0, room.x1, room.x2)
+			y = libtcod.random_get_int(0, room.y1, room.y2)
+
+			#chances: 20% monster A, 40% monster B, 10% monster C, 30% monster D
+			choice = libtcod.random_get_int(0, 0, 100)
+			if choice < 20:
+				#create human
+				monster = Object(x, y, 'h', libtcod.desaturated_green)
+			elif choice < 20+40:
+				#create a kobold
+				monster = Object(x, y, 'k', libtcod.dark_orange)
+			elif choice < 20+40+10:
+				#create troll
+				monster = Object(x, y, 'T', libtcod.darker_green)
+			else:
+				#create orc
+				monster = Object(x, y, 'o', libtcod.desaturated_green)
+			objects.append(monster)
 
 #Create Rooms
 def create_room(room):
@@ -66,7 +104,9 @@ class Tile:
 class Object:
     #this is a generic object: the player, a monster, an item, the stairs...
     #it's always represented by a character on screen.
-	def __init__(self, x, y, char, color):
+	def __init__(self, x, y, char, name, color, blocks=False):
+		self.name = name
+		self.blocks = blocks
 		self.x = x
 		self.y = y
 		self.char = char
@@ -171,7 +211,8 @@ def make_map():
 					#first move vertically, then horizontally
 					create_v_tunnel(prev_y, new_y, prev_x)
 					create_h_tunnel(prev_x, new_x, prev_y)
-
+			#adds monsters, etc to the room
+			place_objects(new_room)
 			#finally, append to the new room list
 			rooms.append(new_room)
 			num_rooms += 1
@@ -230,8 +271,7 @@ def render_all():
 
 
 player = Object(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, '@', libtcod.white)
-npc = Object(SCREEN_WIDTH/2 - 5, SCREEN_HEIGHT/2, '@', libtcod.yellow)
-objects = [npc, player]
+objects = [player]
 libtcod.console_set_custom_font('arial10x10.png', libtcod.FONT_TYPE_GREYSCALE | libtcod.FONT_LAYOUT_TCOD)
 
 #Starts the window (Last parameter decides if fullscreen or not
