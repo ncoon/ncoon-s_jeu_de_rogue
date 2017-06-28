@@ -200,12 +200,13 @@ def create_room(room):
 	for x in range(room.x1 + 1, room.x2):
 		for y in range(room.y1 + 1, room.y2): #Makes it so that two rooms will never overlap (Always have a space in between)
 			map[x][y].blocked = False
-			map[x][y].block_sight = False 
+			map[x][y].block_sight = False
 
 #TURN BASED GAMES USE console_check_for_keypress
 #Draw stuff before handling key input (in main loop) so that the game doesn't load with a blank screen.
 def handle_keys():
-	key = libtcod.console_wait_for_keypress(True) #This line makes the game wait until the player presses a key. Renders it turn-based.
+	global key
+	#key = libtcod.console_wait_for_keypress(True) #This line makes the game wait until the player presses a key. Renders it turn-based.
 	#ALT+Enter: toggle fullscreen
 	if key.vk == libtcod.KEY_ENTER and key.lalt:
 		libtcod.console_set_fullscreen(not libtcod.console_is_fullscreen())
@@ -214,22 +215,32 @@ def handle_keys():
 
 	if game_state == 'playing':
 		#these are the movement keys
-		global fov_recompute
+		#global fov_recompute
 		#Checks for pressed keys and then changes the player coordinates on either 'x' or 'y' axis.
-		if libtcod.console_is_key_pressed(libtcod.KEY_UP):
+		if key.vk == libtcod.KEY_UP:
 			player_move_or_attack(0, -1)
-			fov_recompute = True
-		elif libtcod.console_is_key_pressed(libtcod.KEY_DOWN):
+			#fov_recompute = True
+		elif key.vk == libtcod.KEY_DOWN:
 			player_move_or_attack(0, 1)			
-			fov_recompute = True
-		elif libtcod.console_is_key_pressed(libtcod.KEY_LEFT):
+			#fov_recompute = True
+		elif key.vk == libtcod.KEY_LEFT:
 			player_move_or_attack(-1, 0)
-			fov_recompute = True
-		elif libtcod.console_is_key_pressed(libtcod.KEY_RIGHT):
+			#fov_recompute = True
+		elif key.vk == libtcod.KEY_RIGHT:
 			player_move_or_attack(1, 0)
-			fov_recompute = True
+			#fov_recompute = True
 		else:
 			return 'player didnt take turn'
+
+def get_names_under_mouse():
+	global mouse
+	#return a string of names of all the objects on the tile pointed at by the mouse
+	(x, y) = (mouse.cx, mouse.cy)
+	#create a list of names with all the objects in the mouse's coordinates and in FOV
+	names = [obj.name for obj in objects
+		if obj.x == obj.x and obj.y == obj.y and libtcod.map_is_in_fov(fov_map, obj.x, obj.y)]
+	names = ', '.join(names) #join the names, separated by commas
+	return names.capitalize()
 
 #Uses list comprehension
 def make_map():
@@ -246,8 +257,8 @@ def make_map():
 		w = libtcod.random_get_int(0, ROOM_MIN_SIZE, ROOM_MAX_SIZE)
 		h = libtcod.random_get_int(0, ROOM_MIN_SIZE, ROOM_MAX_SIZE)
 		#Random position without going out of the boundaries of the map.
-		x = libtcod.random_get_int(0, 0, MAP_WIDTH - w -1)
-		y = libtcod.random_get_int(0, 0, MAP_HEIGHT -h -1)
+		x = libtcod.random_get_int(0, 0, MAP_WIDTH - w - 1)
+		y = libtcod.random_get_int(0, 0, MAP_HEIGHT - h - 1)
 
 		#"Rect" class makes rectangles easier to work with
 		new_room = Rect(x, y, w, h)
@@ -359,6 +370,10 @@ def render_all():
 	#Show the player's stats
 	render_bar(1, 1, BAR_WIDTH, 'HP', player.fighter.hp, player.fighter.max_hp, libtcod.light_red, libtcod.darker_red)
 
+	#display names of objects under the mouse
+	libtcod.console_set_default_foreground(panel, libtcod.light_gray)
+	libtcod.console_print_ex(panel, 1, 0, libtcod.BKGND_NONE, libtcod.LEFT, get_names_under_mouse())
+
 	#blit the contents of the panel to the root console
 	libtcod.console_blit(panel, 0, 0, SCREEN_WIDTH, PANEL_HEIGHT, 0, 0, PANEL_Y)
 
@@ -366,7 +381,7 @@ def player_move_or_attack(dx, dy):
 	global fov_recompute
 
 	#coordinates where player is moving/attacking to
-	x = player.x + dx
+	x = player.x + dx 
 	y = player.y + dy
 
 	#determine if target is an attackable object
@@ -487,9 +502,18 @@ player_action = None
 #Friendly message at game start
 message('Welcome adventurer, to the Cheese Goblin Mountain. Prepare to perish as all those before you.', libtcod.red)
 
+#assigns mouse and key press variable
+mouse = libtcod.Mouse()
+key = libtcod.Key()
+
+#limit game run speed
+libtcod.sys_set_fps(LIMIT_FPS)
+
 #MAIN LOOP - Keeps running game logic so long as window is not closed.
 while not libtcod.console_is_window_closed():
 
+	#check for mouse or key press
+	libtcod.sys_check_for_event(libtcod.EVENT_KEY_PRESS|libtcod.EVENT_MOUSE,key,mouse)
 	#render at the screen
 	render_all()
 
